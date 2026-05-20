@@ -1,0 +1,515 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<script src="https://www.youtube.com/game_api/v1"></script>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Pro Candy Match - Ultimate Studio Edition</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@600;800;900&display=swap');
+
+        :root {
+            --board-bg: rgba(255, 255, 255, 0.1);
+            --text-color: #ffffff;
+        }
+
+        body {
+            font-family: 'Poppins', sans-serif;
+            background: linear-gradient(135deg, #1e3c72, #2a5298);
+            color: var(--text-color);
+            display: flex; flex-direction: column; align-items: center;
+            margin: 0; padding: 10px; min-height: 100vh;
+            touch-action: none; overflow: hidden; transition: background 1.5s ease;
+        }
+
+        /* Top Bar: Lives & Settings */
+        .top-bar {
+            width: 100%; max-width: 400px; display: flex; justify-content: space-between;
+            align-items: center; margin-bottom: 5px; z-index: 10;
+        }
+        .lives {
+            font-size: 1.3rem; font-weight: bold; color: #ff4d4d;
+            background: rgba(0,0,0,0.4); padding: 5px 15px; border-radius: 20px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.5); border: 1px solid rgba(255,255,255,0.2);
+            text-shadow: 0 2px 4px #000;
+        }
+        .btn-settings {
+            background: rgba(0,0,0,0.4); border: 1px solid rgba(255,255,255,0.2);
+            color: #fff; font-size: 1.2rem; padding: 8px 12px; border-radius: 50%;
+            cursor: pointer; box-shadow: 0 2px 5px rgba(0,0,0,0.5); transition: transform 0.2s;
+        }
+        .btn-settings:active { transform: scale(0.9); }
+
+        .header { text-align: center; margin-bottom: 5px; z-index: 10;}
+        .header h1 { margin: 0 0 5px 0; font-size: 2.2rem; text-shadow: 0 4px 10px rgba(0,0,0,0.6); letter-spacing: 2px; color: #f1c40f; }
+
+        .progress-container {
+            width: 100%; max-width: 380px; height: 16px; background: rgba(0,0,0,0.6); border-radius: 10px;
+            margin-bottom: 12px; overflow: hidden; box-shadow: inset 0 2px 6px rgba(0,0,0,0.8);
+            border: 1px solid rgba(255,255,255,0.2); z-index: 10;
+        }
+        .progress-fill {
+            height: 100%; width: 0%; background: linear-gradient(90deg, #f1c40f, #e67e22, #e74c3c);
+            transition: width 0.4s ease-out; box-shadow: 0 0 10px rgba(241, 196, 15, 0.8); border-radius: 10px;
+        }
+
+        .stats, .grid, .boosters {
+            background: rgba(255, 255, 255, 0.1); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.2); box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+        }
+
+        .stats {
+            display: flex; gap: 15px; font-size: 1.1rem; padding: 10px 20px; border-radius: 15px; margin-bottom: 15px;
+            flex-wrap: wrap; justify-content: center; z-index: 10; width: 90%; max-width: 380px;
+        }
+        .stats div { text-shadow: 0 2px 4px rgba(0,0,0,0.7); }
+        .highlight { color: #f1c40f; font-size: 1.3rem; }
+
+        .grid { display: grid; gap: 8px; padding: 12px; border-radius: 20px; z-index: 10; position: relative; }
+        .grid > div {
+            width: 50px; height: 50px; background-color: rgba(0, 0, 0, 0.4); border-radius: 14px; 
+            box-shadow: inset 0 3px 6px rgba(0,0,0,0.6); display: flex; justify-content: center; align-items: center;
+            cursor: pointer; position: relative;
+        }
+
+        .ice-block::after {
+            content: ''; position: absolute; top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(173, 216, 230, 0.5); border: 2px solid rgba(255,255,255,0.9); border-radius: 14px;
+            pointer-events: none; box-shadow: inset 0 0 15px rgba(255,255,255,0.9); z-index: 5;
+        }
+
+        .candy {
+            width: 44px; height: 44px; border-radius: 50%;
+            box-shadow: inset -5px -5px 12px rgba(0,0,0,0.5), inset 5px 5px 8px rgba(255,255,255,0.6), 0 5px 8px rgba(0,0,0,0.6);
+            pointer-events: none; position: relative; z-index: 1;
+            transition: transform 0.25s ease, left 0.25s ease, top 0.25s ease; /* Smooth Animations */
+        }
+        .grid > div:active .candy { transform: scale(0.85); }
+
+        .candy.red { background: radial-gradient(circle at 35% 35%, #ff4d4d, #c0392b); }
+        .candy.blue { background: radial-gradient(circle at 35% 35%, #4da6ff, #0984e3); }
+        .candy.green { background: radial-gradient(circle at 35% 35%, #55efc4, #00b894); }
+        .candy.yellow { background: radial-gradient(circle at 35% 35%, #ffeaa7, #fdcb6e); }
+        .candy.purple { background: radial-gradient(circle at 35% 35%, #e056fd, #6c5ce7); }
+        .candy.orange { background: radial-gradient(circle at 35% 35%, #ffb142, #e17055); }
+        
+        .candy.multicolor {
+            background: conic-gradient(#ff4d4d, #ffeaa7, #55efc4, #4da6ff, #e056fd, #ff4d4d);
+            box-shadow: 0 0 20px rgba(255, 255, 255, 0.9), inset 0 0 8px rgba(0,0,0,0.6);
+            animation: spin 2s linear infinite; border: 2.5px solid #fff;
+        }
+
+        .candy[data-type="striped-h"]::before { content: ''; position: absolute; top: 38%; left: 0; width: 100%; height: 24%; background: rgba(255,255,255,0.95); box-shadow: 0 0 5px #fff; }
+        .candy[data-type="striped-v"]::before { content: ''; position: absolute; left: 38%; top: 0; width: 24%; height: 100%; background: rgba(255,255,255,0.95); box-shadow: 0 0 5px #fff; }
+
+        .boosters { display: flex; gap: 15px; margin-top: 15px; border-radius: 20px; padding: 10px 20px; }
+        .btn-booster {
+            padding: 10px 20px; font-size: 1rem; font-family: 'Poppins', sans-serif;
+            border: 1px solid rgba(255,255,255,0.4); border-radius: 25px; cursor: pointer;
+            background: rgba(255,255,255,0.2); color: #fff; text-shadow: 0 2px 4px rgba(0,0,0,0.5); transition: all 0.2s; backdrop-filter: blur(5px);
+        }
+        .btn-booster:active { transform: scale(0.9); }
+        .btn-booster.active-hammer { background: rgba(231, 76, 60, 0.8); border-color: #fff; box-shadow: 0 0 15px #e74c3c; }
+
+        #message-board { margin-top: 12px; font-size: 1.3rem; color: #fff; text-shadow: 0 2px 5px #000; min-height: 25px; text-align: center; z-index: 10; }
+
+        /* MODAL CSS (Out of Lives) */
+        .modal-overlay {
+            position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(0,0,0,0.8);
+            display: none; justify-content: center; align-items: center; z-index: 10000; backdrop-filter: blur(5px);
+        }
+        .modal-overlay.active { display: flex; }
+        .modal-content {
+            background: linear-gradient(135deg, #e74c3c, #c0392b); padding: 30px; border-radius: 20px; text-align: center;
+            border: 2px solid #fff; box-shadow: 0 10px 30px #000; color: #fff; max-width: 300px;
+        }
+        .modal-content h2 { margin: 0 0 10px 0; font-size: 2rem; text-shadow: 0 2px 5px #000; }
+        .btn-refill {
+            margin-top: 20px; background: #f1c40f; color: #000; border: none; padding: 10px 20px; font-weight: bold;
+            font-size: 1.2rem; border-radius: 30px; cursor: pointer; box-shadow: 0 4px 10px rgba(0,0,0,0.5);
+        }
+
+        /* Animations & Effects */
+        .floating-score { position: fixed; color: #fff; font-weight: 800; font-size: 1.8rem; text-shadow: 0 0 10px #000, 0 0 8px #f1c40f; pointer-events: none; z-index: 9999; animation: floatUp 1s ease-out forwards; }
+        .combo-text { position: fixed; color: #ff0055; font-weight: 900; font-size: 3rem; text-shadow: 0 0 15px #fff, 0 0 5px #ffc700; pointer-events: none; z-index: 9999; animation: comboPop 1.2s ease-out forwards; left: 50%; top: 50%; transform: translate(-50%, -50%); }
+        @keyframes floatUp { 0% { transform: translateY(0) scale(1); opacity: 1; } 100% { transform: translateY(-50px) scale(1.5); opacity: 0; } }
+        @keyframes comboPop { 0% { transform: translate(-50%, -50%) scale(0.5); opacity: 0; } 20% { transform: translate(-50%, -50%) scale(1.2); opacity: 1; } 80% { transform: translate(-50%, -50%) scale(1); opacity: 1; } 100% { transform: translate(-50%, -100%) scale(1.5); opacity: 0; } }
+        .drop-anim { animation: dropDown 0.3s ease-in forwards; }
+        @keyframes dropDown { 0% { transform: translateY(-40px); opacity: 0.5; } 100% { transform: translateY(0); opacity: 1; } }
+        .pop-anim { animation: pop 0.2s forwards; }
+        @keyframes pop { 0% { transform: scale(1); opacity: 1; } 50% { transform: scale(1.4); opacity: 0.9; box-shadow: 0 0 20px #fff; } 100% { transform: scale(0); opacity: 0; } }
+        @keyframes spin { 100% { transform: rotate(360deg); } }
+        .blast-h { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: #fff; z-index: 20; animation: blastFade 0.3s forwards; pointer-events:none;}
+        @keyframes blastFade { 0% { opacity: 0.9; transform: scaleY(1.8); } 100% { opacity: 0; transform: scaleY(1); } }
+        .shake-anim { animation: screenShake 0.3s cubic-bezier(.36,.07,.19,.97) both; }
+        @keyframes screenShake { 0%, 100% { transform: translate(0, 0) rotate(0deg); } 20% { transform: translate(-2px, 2px) rotate(-1deg); } 40% { transform: translate(2px, -2px) rotate(1deg); } 60% { transform: translate(-2px, -2px) rotate(0deg); } 80% { transform: translate(2px, 2px) rotate(-1deg); } }
+
+        /* Celebration CSS Hidden for brevity but active */
+        #celebration-container { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; pointer-events: none; z-index: 9999; display: none; justify-content: center; align-items: center; overflow: hidden; }
+        #celebration-container.active { display: flex; }
+        .celeb-overlay { position: absolute; width: 100%; height: 100%; background: radial-gradient(circle, rgba(0,0,0,0.4) 0%, rgba(0,0,0,0.9) 100%); animation: fadeIn 0.5s forwards; }
+        .celeb-rays { position: absolute; width: 200vmax; height: 200vmax; background: repeating-conic-gradient(rgba(255,215,0,0.15) 0 15deg, transparent 15deg 30deg); animation: spinRays 15s linear infinite; border-radius: 50%; }
+        .celeb-text-group { position: relative; text-align: center; z-index: 2; animation: epicTextPop 4s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards; }
+        .celeb-title { font-size: min(15vw, 6rem); font-weight: 900; background: linear-gradient(to bottom, #FFF700, #FF8C00); -webkit-background-clip: text; color: transparent; -webkit-text-stroke: 2px #fff; filter: drop-shadow(0 15px 15px rgba(0,0,0,0.9)); margin: 0; line-height: 1; letter-spacing: 2px; }
+        .celeb-subtitle { font-size: min(5vw, 1.8rem); color: #fff; margin-top: 15px; text-shadow: 0 4px 6px rgba(0,0,0,0.9); letter-spacing: 4px; text-transform: uppercase; background: rgba(0,0,0,0.5); padding: 8px 25px; border-radius: 30px; border: 2px solid rgba(255,215,0,0.5); display: inline-block; box-shadow: 0 0 20px rgba(255,215,0,0.4); }
+        .emoji-particle { position: absolute; font-size: 2.5rem; animation: premiumExplode ease-out forwards; z-index: 1; }
+        @keyframes fadeIn { 0% { opacity: 0; } 100% { opacity: 1; } } @keyframes spinRays { 100% { transform: rotate(360deg); } } @keyframes epicTextPop { 0% { transform: scale(0.1) translateY(50px); opacity: 0; } 15% { transform: scale(1.1) translateY(0); opacity: 1; } 85% { transform: scale(1) translateY(0); opacity: 1; } 100% { transform: scale(1.5) translateY(-50px); opacity: 0; } } @keyframes premiumExplode { 0% { transform: translate(0, 0) rotate(0deg) scale(0.5); opacity: 0; } 5% { opacity: 1; scale: 1.5; } 80% { opacity: 1; } 100% { transform: translate(var(--tx), var(--ty)) rotate(var(--r)) scale(0.5); opacity: 0; } }
+
+    </style>
+</head>
+<body>
+
+    <div class="top-bar">
+        <div class="lives">❤️ <span id="life-count">5</span></div>
+        <button class="btn-settings" id="btn-sound">🔊</button>
+    </div>
+
+    <div class="header">
+        <h1>CANDY PREMIUM</h1>
+    </div>
+
+    <div class="progress-container">
+        <div class="progress-fill" id="progress-fill"></div>
+    </div>
+
+    <div class="stats">
+        <div>Level <span class="highlight" id="level">1</span></div>
+        <div>Score <span class="highlight" id="score">0</span></div>
+        <div>Moves <span class="highlight" id="moves">15</span></div>
+    </div>
+
+    <div class="grid" id="grid"></div>
+    
+    <div class="boosters">
+        <button class="btn-booster" id="btn-hammer">🔨 Smash (<span id="hammer-count">3</span>)</button>
+        <button class="btn-booster" id="btn-moves">🚀 +5 Moves (<span id="move-count">3</span>)</button>
+    </div>
+
+    <div id="message-board">Swipe or Drag to Match!</div>
+
+    <div id="celebration-container"></div>
+
+    <!-- Out of Lives Modal -->
+    <div class="modal-overlay" id="lives-modal">
+        <div class="modal-content">
+            <h2>💔 Out of Lives!</h2>
+            <p>Wait for lives to refill or click below for a free refill (Dev Tool).</p>
+            <button class="btn-refill" id="btn-refill">Refill Hearts ❤️</button>
+        </div>
+    </div>
+
+<script>
+    document.addEventListener('DOMContentLoaded', () => {
+        const grid = document.getElementById('grid');
+        const scoreDisplay = document.getElementById('score');
+        const levelDisplay = document.getElementById('level');
+        const movesDisplay = document.getElementById('moves');
+        const messageBoard = document.getElementById('message-board');
+        const hammerBtn = document.getElementById('btn-hammer');
+        const movesBtn = document.getElementById('btn-moves');
+        const progressFill = document.getElementById('progress-fill');
+        const soundBtn = document.getElementById('btn-sound');
+        
+        let squares = []; let score = 0; let currentCombo = 0;
+        
+        // --- META DATA ---
+        let currentLevel = 1; let hammerCount = 3; let moveCount = 3; let lives = 5; let soundEnabled = true;
+        try {
+            if(localStorage.getItem('candyLevel')) currentLevel = parseInt(localStorage.getItem('candyLevel')) || 1;
+            if(localStorage.getItem('hammerCount')) hammerCount = parseInt(localStorage.getItem('hammerCount')) || 3;
+            if(localStorage.getItem('moveCount')) moveCount = parseInt(localStorage.getItem('moveCount')) || 3;
+            if(localStorage.getItem('candyLives')) lives = parseInt(localStorage.getItem('candyLives'));
+            if(localStorage.getItem('candySound') === 'off') { soundEnabled = false; soundBtn.innerText = '🔇'; }
+        } catch(e) {}
+        
+        document.getElementById('life-count').innerText = lives;
+        if(lives <= 0) document.getElementById('lives-modal').classList.add('active');
+
+        let movesLeft = Math.max(10, 20 - Math.floor(currentLevel / 5));
+        let targetScore = currentLevel * 300 + Math.floor(Math.pow(currentLevel, 1.2) * 100);
+        let cols = 6; let rows = 6; 
+        if (currentLevel > 30) { cols = 6; rows = 7; } 
+
+        let isShuffling = false; let isTransitioning = false; let hammerActive = false; let isGameOver = false;
+        const candyColors = ['red', 'blue', 'green', 'yellow', 'purple', 'orange'];
+
+        const themes = [
+            'linear-gradient(135deg, #1e3c72, #2a5298)', 'linear-gradient(135deg, #0ba360, #3cba92)', 
+            'linear-gradient(135deg, #2980b9, #6dd5fa)', 'linear-gradient(135deg, #b224ef, #7579ff)', 'linear-gradient(135deg, #f12711, #f5af19)'  
+        ];
+
+        function updateTheme() { document.body.style.background = themes[Math.floor((currentLevel - 1) / 5) % themes.length]; }
+        document.getElementById('hammer-count').innerText = hammerCount; document.getElementById('move-count').innerText = moveCount;
+        function safeSave(key, value) { try { localStorage.setItem(key, value); } catch(e) {} }
+
+        // --- BUTTONS ---
+        soundBtn.addEventListener('click', () => {
+            soundEnabled = !soundEnabled;
+            soundBtn.innerText = soundEnabled ? '🔊' : '🔇';
+            safeSave('candySound', soundEnabled ? 'on' : 'off');
+        });
+
+        document.getElementById('btn-refill').addEventListener('click', () => {
+            lives = 5; safeSave('candyLives', lives); document.getElementById('life-count').innerText = lives;
+            document.getElementById('lives-modal').classList.remove('active');
+            location.reload();
+        });
+
+        hammerBtn.addEventListener('click', () => {
+            if(hammerCount > 0 && !hammerActive && movesLeft > 0 && !isGameOver) {
+                hammerActive = true; hammerBtn.classList.add('active-hammer');
+                messageBoard.innerHTML = "Tap any candy to smash!";
+            } else if (hammerActive) {
+                hammerActive = false; hammerBtn.classList.remove('active-hammer'); messageBoard.innerHTML = "Smash Canceled.";
+            }
+        });
+
+        movesBtn.addEventListener('click', () => {
+            if(moveCount > 0 && !isTransitioning) {
+                if(isGameOver) {
+                    isGameOver = false; grid.style.pointerEvents = "auto"; messageBoard.style.cursor = "default";
+                }
+                moveCount--; safeSave('moveCount', moveCount); document.getElementById('move-count').innerText = moveCount;
+                movesLeft += 5; updateStats(); playPopSound();
+                messageBoard.innerHTML = "Saved! +5 Moves Added!"; messageBoard.style.color = "#f1c40f";
+            }
+        });
+
+        // --- AUDIO ---
+        let audioCtx;
+        function initAudio() { if(!soundEnabled) return; if (!audioCtx) { const AudioContext = window.AudioContext || window.webkitAudioContext; if(AudioContext) audioCtx = new AudioContext(); } if(audioCtx && audioCtx.state === 'suspended') audioCtx.resume(); }
+
+        function playPopSound(isCombo = false) {
+            if(!soundEnabled) return;
+            try { initAudio(); const osc = audioCtx.createOscillator(); const gain = audioCtx.createGain(); osc.connect(gain); gain.connect(audioCtx.destination); osc.type = 'sine'; let freq = isCombo ? 1000 : 700; osc.frequency.setValueAtTime(freq, audioCtx.currentTime); osc.frequency.exponentialRampToValueAtTime(freq*1.5, audioCtx.currentTime + 0.1); gain.gain.setValueAtTime(0.2, audioCtx.currentTime); gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.1); osc.start(); osc.stop(audioCtx.currentTime + 0.1); } catch(e) { }
+        }
+
+        function playVictoryJingle() {
+            if(!soundEnabled) return;
+            try { initAudio(); const notes = [523.25, 659.25, 783.99, 1046.50]; let startTime = audioCtx.currentTime; notes.forEach((freq, i) => { const osc = audioCtx.createOscillator(); const gain = audioCtx.createGain(); osc.connect(gain); gain.connect(audioCtx.destination); osc.type = 'sine'; osc.frequency.value = freq; gain.gain.setValueAtTime(0, startTime + i * 0.15); gain.gain.linearRampToValueAtTime(0.3, startTime + i * 0.15 + 0.05); gain.gain.exponentialRampToValueAtTime(0.01, startTime + i * 0.15 + 1.5); osc.start(startTime + i * 0.15); osc.stop(startTime + i * 0.15 + 1.6); }); } catch(e) {}
+        }
+        function speak(text) { if(!soundEnabled) return; try { if('speechSynthesis' in window) { const u = new SpeechSynthesisUtterance(text); u.pitch=1.4; u.rate=1.1; window.speechSynthesis.speak(u); } } catch(e){} }
+
+        // --- VISUALS ---
+        function showFloatingScore(index, amount) { let cell = squares[index]; if(!cell) return; let rect = cell.getBoundingClientRect(); let floatText = document.createElement('div'); floatText.innerText = "+" + amount; floatText.classList.add('floating-score'); floatText.style.left = (rect.left + 5) + 'px'; floatText.style.top = rect.top + 'px'; document.body.appendChild(floatText); setTimeout(() => floatText.remove(), 1000); }
+        function showComboText(multiplier) { let floatText = document.createElement('div'); floatText.innerText = `COMBO x${multiplier}!`; floatText.classList.add('combo-text'); document.body.appendChild(floatText); setTimeout(() => floatText.remove(), 1200); }
+        function shakeScreen() { grid.classList.remove('shake-anim'); void grid.offsetWidth; grid.classList.add('shake-anim'); setTimeout(()=>grid.classList.remove('shake-anim'), 300); }
+        function firePremiumCelebration(nextLevel) { const container = document.getElementById('celebration-container'); container.innerHTML = ''; container.classList.add('active'); let overlay = document.createElement('div'); overlay.className = 'celeb-overlay'; let rays = document.createElement('div'); rays.className = 'celeb-rays'; container.appendChild(overlay); container.appendChild(rays); const emojis = ['🎉', '🎊', '✨', '⭐', '🏆', '💎', '🔥', '🌟']; for(let i=0; i<100; i++) { let p = document.createElement('div'); p.className = 'emoji-particle'; p.innerText = emojis[Math.floor(Math.random() * emojis.length)]; let angle = Math.random() * Math.PI * 2; let distance = 20 + Math.random() * 80; p.style.setProperty('--tx', Math.cos(angle) * distance + 'vw'); p.style.setProperty('--ty', Math.sin(angle) * distance + 'vh'); p.style.setProperty('--r', (Math.random() * 1080 - 540) + 'deg'); p.style.animationDuration = (1.5 + Math.random() * 2) + 's'; container.appendChild(p); } let textGroup = document.createElement('div'); textGroup.className = 'celeb-text-group'; textGroup.innerHTML = `<h1 class="celeb-title">LEVEL UP!</h1><div class="celeb-subtitle">Level ${nextLevel} Unlocked</div>`; container.appendChild(textGroup); setTimeout(() => { container.classList.remove('active'); container.innerHTML = ''; }, 3800); }
+
+        // --- CORE LOGIC ---
+        function getColor(index) { return squares[index]?.firstChild?.dataset?.color || null; }
+        function getType(index) { return squares[index]?.firstChild?.dataset?.type || 'normal'; }
+        function setColor(index, color, type='normal', addDropAnim=false) { if (!squares[index]) return; squares[index].innerHTML = ''; if (color) { const candy = document.createElement('div'); candy.classList.add('candy', color); if(addDropAnim) candy.classList.add('drop-anim'); candy.dataset.color = color; candy.dataset.type = type; squares[index].appendChild(candy); } }
+        function getValidRandomColor(i) { let available = [...candyColors]; if (i % cols >= 2) { let c1 = getColor(i - 1), c2 = getColor(i - 2); if (c1 && c1 === c2) available = available.filter(c => c !== c1); } if (Math.floor(i / cols) >= 2) { let c1 = getColor(i - cols), c2 = getColor(i - cols * 2); if (c1 && c1 === c2) available = available.filter(c => c !== c1); } return available.length ? available[Math.floor(Math.random() * available.length)] : candyColors[0]; }
+
+        function setupGrid() {
+            updateTheme(); grid.innerHTML = ''; squares = []; currentCombo = 0; isGameOver = false;
+            grid.style.gridTemplateColumns = `repeat(${cols}, 50px)`; grid.style.gridTemplateRows = `repeat(${rows}, 50px)`;
+            for (let i = 0; i < cols * rows; i++) {
+                const square = document.createElement('div'); square.setAttribute('draggable', true); square.setAttribute('id', i);
+                if(currentLevel >= 3 && Math.random() < 0.15) square.classList.add('ice-block');
+                grid.appendChild(square); squares.push(square);
+            }
+            let boardHasMove = false; let attempts = 0;
+            while (!boardHasMove && attempts < 50) { attempts++; for (let i = 0; i < cols * rows; i++) setColor(i, getValidRandomColor(i), 'normal'); if (hasAnyValidMove()) boardHasMove = true; }
+            levelDisplay.innerHTML = currentLevel; movesDisplay.innerHTML = movesLeft; scoreDisplay.innerHTML = score;
+            updateProgress(); bindEvents();
+        }
+
+        let squareIdBeingDragged, squareIdBeingReplaced, colorDragged, colorReplaced, startX, startY;
+
+        function bindEvents() {
+            squares.forEach(square => {
+                square.addEventListener('dragstart', dragStart); square.addEventListener('dragend', dragEnd);
+                square.addEventListener('dragover', e => e.preventDefault()); square.addEventListener('dragenter', e => e.preventDefault());
+                square.addEventListener('drop', dragDrop);
+                square.addEventListener('touchstart', touchStart, {passive: false}); square.addEventListener('touchend', touchEnd);
+                square.addEventListener('mousedown', hammerSmash);
+            });
+        }
+
+        function hammerSmash(e) { if(hammerActive && squares[this.id].firstChild) { hammerActive = false; hammerBtn.classList.remove('active-hammer'); hammerCount--; safeSave('hammerCount', hammerCount); document.getElementById('hammer-count').innerText = hammerCount; playPopSound(); score += 20; showFloatingScore(this.id, 20); if(squares[this.id].classList.contains('ice-block')) { squares[this.id].classList.remove('ice-block'); score += 30; showFloatingScore(this.id, 50); } popCandy(parseInt(this.id)); updateStats(); messageBoard.innerHTML = "SMASHED!"; } }
+        function touchStart(e) { if(isShuffling || isTransitioning || hammerActive || isGameOver) return; e.preventDefault(); startX = e.touches[0].clientX; startY = e.touches[0].clientY; squareIdBeingDragged = parseInt(this.id); colorDragged = getColor(squareIdBeingDragged); currentCombo = 0; }
+        function touchEnd(e) { if (isShuffling || isTransitioning || hammerActive || squareIdBeingDragged === undefined || isGameOver) return; let diffX = e.changedTouches[0].clientX - startX; let diffY = e.changedTouches[0].clientY - startY; if (Math.abs(diffX) > 20 || Math.abs(diffY) > 20) { if (Math.abs(diffX) > Math.abs(diffY)) squareIdBeingReplaced = diffX > 0 ? squareIdBeingDragged + 1 : squareIdBeingDragged - 1; else squareIdBeingReplaced = diffY > 0 ? squareIdBeingDragged + cols : squareIdBeingDragged - cols; processSwap(); } squareIdBeingDragged = undefined; }
+        function dragStart() { if(isShuffling || isTransitioning || hammerActive || isGameOver) return; colorDragged = getColor(parseInt(this.id)); squareIdBeingDragged = parseInt(this.id); currentCombo = 0; }
+        function dragDrop() { squareIdBeingReplaced = parseInt(this.id); }
+        function dragEnd() { if (squareIdBeingReplaced === undefined || isShuffling || isTransitioning || hammerActive || isGameOver) return; processSwap(); squareIdBeingReplaced = undefined; }
+
+        function processSwap() {
+            colorReplaced = getColor(squareIdBeingReplaced); if(!colorReplaced) return;
+            if (squareIdBeingDragged % cols === cols - 1 && squareIdBeingReplaced === squareIdBeingDragged + 1) return;
+            if (squareIdBeingDragged % cols === 0 && squareIdBeingReplaced === squareIdBeingDragged - 1) return;
+            let validMoves = [squareIdBeingDragged - 1, squareIdBeingDragged + 1, squareIdBeingDragged - cols, squareIdBeingDragged + cols];
+            if (validMoves.includes(squareIdBeingReplaced)) {
+                let type1 = getType(squareIdBeingDragged); let type2 = getType(squareIdBeingReplaced);
+                
+                // 🔥 ULTIMATE COMBO: Multicolor + Striped 🔥
+                if ((colorDragged === 'multicolor' && type2.includes('striped')) || (colorReplaced === 'multicolor' && type1.includes('striped'))) {
+                    let targetColor = colorDragged === 'multicolor' ? colorReplaced : colorDragged;
+                    handleUltimateCombo(targetColor); movesLeft--; updateStats(); return;
+                }
+                
+                if (colorDragged === 'multicolor' || colorReplaced === 'multicolor') { handleMulticolorSwap(colorDragged, colorReplaced); movesLeft--; updateStats(); return; }
+
+                setColor(squareIdBeingReplaced, colorDragged, type1, true); setColor(squareIdBeingDragged, colorReplaced, type2, true);
+                if (checkMatches(false)) { movesLeft--; updateStats(); } else { setColor(squareIdBeingReplaced, colorReplaced, type2); setColor(squareIdBeingDragged, colorDragged, type1); }
+            }
+        }
+
+        // NEW: ULTIMATE COMBO LOGIC
+        function handleUltimateCombo(targetColor) {
+            shakeScreen(); playPopSound(); speak("Amazing Combo!");
+            let converted = [];
+            squares.forEach((sq, i) => {
+                if (getColor(i) === targetColor) {
+                    setColor(i, targetColor, Math.random() > 0.5 ? 'striped-h' : 'striped-v');
+                    converted.push(i);
+                }
+            });
+            setTimeout(() => {
+                converted.forEach(i => {
+                    let t = getType(i);
+                    if(t === 'striped-h') { let r = Math.floor(i / cols); for(let c=0; c<cols; c++) { let id = r*cols+c; addBlastEffect(id); popCandy(id); score+=10; } }
+                    if(t === 'striped-v') { let c = i % cols; for(let r=0; r<rows; r++) { let id = r*cols+c; addBlastEffect(id); popCandy(id); score+=10; } }
+                });
+                popCandy(squareIdBeingDragged); popCandy(squareIdBeingReplaced); // Remove the initiators
+                updateStats();
+            }, 800); // Slight delay to show the conversion before blasting
+        }
+
+        function handleMulticolorSwap(dragged, replaced) {
+            playPopSound(); 
+            let targetColor = dragged === 'multicolor' ? replaced : dragged;
+            squares.forEach((sq, i) => {
+                if (getColor(i) === targetColor || getColor(i) === 'multicolor') { 
+                    if(squares[i].classList.contains('ice-block')) squares[i].classList.remove('ice-block');
+                    popCandy(i); score += 50; showFloatingScore(i, 50);
+                }
+            });
+            updateStats();
+        }
+
+        function moveDown() {
+            for (let c = 0; c < cols; c++) {
+                for (let r = rows - 1; r > 0; r--) {
+                    let i = r * cols + c; let aboveI = (r - 1) * cols + c;
+                    if (!getColor(i) && getColor(aboveI)) { setColor(i, getColor(aboveI), getType(aboveI), true); setColor(aboveI, null); }
+                }
+                if (!getColor(c)) setColor(c, candyColors[Math.floor(Math.random() * candyColors.length)], 'normal', true);
+            }
+        }
+
+        function addBlastEffect(id) { let blast = document.createElement('div'); blast.className = 'blast-h'; squares[id].appendChild(blast); setTimeout(()=>blast.remove(), 300); }
+
+        function checkMatches(clearMatches = true) {
+            let hasMatch = false; let matchedIndices = new Set(); 
+            let spawnMulticolorAt = -1; let spawnStripedHAt = -1; let spawnStripedVAt = -1; let stripedColor = '';
+
+            for (let r = 0; r < rows; r++) { for (let c = 0; c < cols - 4; c++) { let i = r * cols + c; let color = getColor(i); if (color && color !== 'multicolor' && color === getColor(i+1) && color === getColor(i+2) && color === getColor(i+3) && color === getColor(i+4)) { hasMatch = true; if(clearMatches) { [i, i+1, i+2, i+3, i+4].forEach(id => matchedIndices.add(id)); spawnMulticolorAt = i + 2; } } } }
+            for (let c = 0; c < cols; c++) { for (let r = 0; r < rows - 4; r++) { let i = r * cols + c; let color = getColor(i); if (color && color !== 'multicolor' && color === getColor(i+cols) && color === getColor(i+cols*2) && color === getColor(i+cols*3) && color === getColor(i+cols*4)) { hasMatch = true; if(clearMatches) { [i, i+cols, i+cols*2, i+cols*3, i+cols*4].forEach(id => matchedIndices.add(id)); spawnMulticolorAt = i + cols*2; } } } }
+            if(spawnMulticolorAt === -1) {
+                for (let r = 0; r < rows; r++) { for (let c = 0; c < cols - 3; c++) { let i = r * cols + c; let color = getColor(i); if (color && color !== 'multicolor' && color === getColor(i+1) && color === getColor(i+2) && color === getColor(i+3)) { hasMatch = true; if(clearMatches) { [i, i+1, i+2, i+3].forEach(id => matchedIndices.add(id)); spawnStripedVAt = i + 1; stripedColor=color; } } } }
+                for (let c = 0; c < cols; c++) { for (let r = 0; r < rows - 3; r++) { let i = r * cols + c; let color = getColor(i); if (color && color !== 'multicolor' && color === getColor(i+cols) && color === getColor(i+cols*2) && color === getColor(i+cols*3)) { hasMatch = true; if(clearMatches) { [i, i+cols, i+cols*2, i+cols*3].forEach(id => matchedIndices.add(id)); spawnStripedHAt = i + cols; stripedColor=color; } } } }
+            }
+            for (let r = 0; r < rows; r++) { for (let c = 0; c < cols - 2; c++) { let i = r * cols + c; let color = getColor(i); if (color && color !== 'multicolor' && color === getColor(i+1) && color === getColor(i+2)) { hasMatch = true; if(clearMatches) [i, i+1, i+2].forEach(id => matchedIndices.add(id)); } } }
+            for (let c = 0; c < cols; c++) { for (let r = 0; r < rows - 2; r++) { let i = r * cols + c; let color = getColor(i); if (color && color !== 'multicolor' && color === getColor(i + cols) && color === getColor(i + cols*2)) { hasMatch = true; if(clearMatches) [i, i+cols, i+cols*2].forEach(id => matchedIndices.add(id)); } } }
+
+            if (clearMatches && matchedIndices.size > 0) {
+                currentCombo++; playPopSound(currentCombo > 1);
+                if(currentCombo > 1) showComboText(currentCombo);
+                
+                let finalIndices = new Set(matchedIndices);
+                matchedIndices.forEach(id => {
+                    let t = getType(id);
+                    if(t === 'striped-h') { shakeScreen(); let r = Math.floor(id / cols); for(let c=0; c<cols; c++) { finalIndices.add(r*cols + c); addBlastEffect(r*cols + c); } }
+                    if(t === 'striped-v') { shakeScreen(); let c = id % cols; for(let r=0; r<rows; r++) { finalIndices.add(r*cols + c); addBlastEffect(r*cols + c); } }
+                });
+
+                finalIndices.forEach(id => { 
+                    let pts = 10 * currentCombo; 
+                    if(squares[id].classList.contains('ice-block')) { squares[id].classList.remove('ice-block'); pts += 30; }
+                    score += pts; showFloatingScore(id, pts); popCandy(id); 
+                });
+
+                if (spawnMulticolorAt !== -1) setColor(spawnMulticolorAt, 'multicolor', 'multicolor');
+                else if (spawnStripedHAt !== -1) setColor(spawnStripedHAt, stripedColor, 'striped-h');
+                else if (spawnStripedVAt !== -1) setColor(spawnStripedVAt, stripedColor, 'striped-v');
+                
+                updateStats();
+            }
+            return hasMatch;
+        }
+
+        function popCandy(index) { if(squares[index] && squares[index].firstChild) { squares[index].firstChild.classList.add('pop-anim'); setTimeout(() => setColor(index, null), 200); } }
+
+        function hasAnyValidMove() {
+            for (let i = 0; i < cols * rows; i++) {
+                let colorA = getColor(i); if (!colorA) continue; if (colorA === 'multicolor') return true;
+                let typeA = getType(i);
+                if ((i + 1) % cols !== 0) { let colorB = getColor(i + 1); if (colorB) { setColor(i, colorB, getType(i+1)); setColor(i + 1, colorA, typeA); let matchRight = checkMatches(false); setColor(i, colorA, typeA); setColor(i + 1, colorB, getType(i+1)); if (matchRight) return true; } }
+                if (i + cols < cols * rows) { let colorB = getColor(i + cols); if (colorB) { setColor(i, colorB, getType(i+cols)); setColor(i + cols, colorA, typeA); let matchDown = checkMatches(false); setColor(i, colorA, typeA); setColor(i + cols, colorB, getType(i+cols)); if (matchDown) return true; } }
+            } return false;
+        }
+
+        function shuffleBoard() {
+            if(isShuffling) return; isShuffling = true; messageBoard.innerHTML = "No Moves! Reshuffling..."; grid.style.opacity = "0.5";
+            setTimeout(() => {
+                let boardHasMove = false; let attempts = 0;
+                while(!boardHasMove && attempts < 50) { attempts++; for(let i=0; i < cols*rows; i++) setColor(i, getValidRandomColor(i), 'normal'); if(hasAnyValidMove()) boardHasMove = true; }
+                grid.style.opacity = "1"; messageBoard.innerHTML = "Swipe or Drag to Match!"; isShuffling = false;
+            }, 1000); 
+        }
+
+        function updateProgress() { let percentage = Math.min(100, (score / targetScore) * 100); progressFill.style.width = percentage + "%"; }
+
+        function updateStats() {
+            scoreDisplay.innerHTML = score; movesDisplay.innerHTML = movesLeft; updateProgress();
+            let iceLeft = document.querySelectorAll('.ice-block').length;
+            if (score >= targetScore && iceLeft === 0) levelUp(); 
+            else if (movesLeft <= 0) gameOver();
+        }
+
+        function levelUp() {
+            if(isTransitioning) return; isTransitioning = true;
+            playVictoryJingle(); firePremiumCelebration(currentLevel + 1);
+            messageBoard.innerHTML = "Epic Win! Saving Progress...";
+            safeSave('candyLevel', currentLevel + 1);
+            setTimeout(() => {
+                currentLevel++; targetScore = currentLevel * 300 + Math.floor(Math.pow(currentLevel, 1.2) * 100);
+                movesLeft = Math.max(10, 20 - Math.floor(currentLevel / 5)); score = 0; currentCombo = 0;
+                setupGrid(); isTransitioning = false; messageBoard.innerHTML = "Swipe or Drag to Match!";
+            }, 4000);
+        }
+
+        function gameOver() {
+            if(isTransitioning || isGameOver) return; 
+            isGameOver = true;
+            lives--; safeSave('candyLives', lives); document.getElementById('life-count').innerText = lives;
+            
+            if(lives <= 0) {
+                document.getElementById('lives-modal').classList.add('active');
+            } else {
+                messageBoard.innerHTML = `Game Over! 💔 Lost 1 Life. Tap here to Try Again.`; 
+                messageBoard.style.color = "#e74c3c"; grid.style.pointerEvents = "none";
+                setTimeout(() => { 
+                    messageBoard.style.cursor = "pointer"; 
+                    messageBoard.onclick = function() { location.reload(); }; 
+                }, 1000);
+            }
+        }
+
+        if(lives > 0) setupGrid();
+
+        window.setInterval(() => {
+            if(isShuffling || isTransitioning || hammerActive || isGameOver || lives <= 0) return; 
+            if(checkMatches(true)) { setTimeout(moveDown, 250); } 
+            else {
+                moveDown(); 
+                let isBoardFull = true; for(let i=0; i < cols*rows; i++) if(!getColor(i)) isBoardFull = false;
+                if(isBoardFull && !checkMatches(false) && !hasAnyValidMove()) shuffleBoard(); 
+            }
+        }, 400);
+    });
+</script>
+</body>
+</html>
